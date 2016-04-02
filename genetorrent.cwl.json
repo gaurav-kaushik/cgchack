@@ -1,0 +1,199 @@
+{
+  "label": "GeneTorrent",
+  "sbg:modifiedBy": "gauravCGC",
+  "sbg:sbgMaintained": false,
+  "stdout": "stdout.txt",
+  "arguments": [],
+  "temporaryFailCodes": [],
+  "sbg:id": "gauravCGC/devtools/genetorrent/1",
+  "sbg:contributors": [
+    "gauravCGC"
+  ],
+  "stdin": "",
+  "id": "https://cgc-api.sbgenomics.com/v2/apps/gauravCGC/devtools/genetorrent/1/raw/",
+  "baseCommand": [
+    "gtdownload"
+  ],
+  "class": "CommandLineTool",
+  "inputs": [
+    {
+      "label": "Credential File",
+      "inputBinding": {
+        "prefix": "-c",
+        "separate": true,
+        "sbg:cmdInclude": true,
+        "position": 1
+      },
+      "id": "#credential",
+      "description": "A credential file is required for download. Use the public key for open access files. For Controlled Access files you must have a authorized download token. See the cgHub manual for more information.",
+      "type": [
+        "null",
+        "string"
+      ],
+      "sbg:toolDefaultValue": "https://www.cghub.ucsc.edu/software/downloads/cghub_public.key"
+    },
+    {
+      "inputBinding": {
+        "prefix": "-d",
+        "separate": true,
+        "sbg:cmdInclude": true,
+        "position": 2
+      },
+      "label": "Analysis UUID",
+      "description": "UUID of the file to download from cgHub",
+      "type": [
+        "null",
+        "string"
+      ],
+      "id": "#UUID"
+    },
+    {
+      "label": "Disease Metadata value",
+      "description": "Metadata value to be set for disease metadata property",
+      "type": [
+        "null",
+        "string"
+      ],
+      "id": "#Disease"
+    },
+    {
+      "label": "Experimental Strategy",
+      "description": "Metadata value to be set for experimental strategy metadata property",
+      "type": [
+        "null",
+        "string"
+      ],
+      "id": "#experimental_strat"
+    }
+  ],
+  "hints": [
+    {
+      "class": "sbg:MemRequirement",
+      "value": 1000
+    },
+    {
+      "dockerImageId": "",
+      "dockerPull": "brandi/genetorrent",
+      "class": "DockerRequirement"
+    },
+    {
+      "class": "sbg:CPURequirement",
+      "value": 0
+    }
+  ],
+  "sbg:job": {
+    "allocatedResources": {
+      "cpu": 0,
+      "mem": 1000
+    },
+    "inputs": {
+      "credential": "credential-string-value",
+      "Disease": "Disease-string-value",
+      "UUID": "UUID-string-value",
+      "experimental_strat": "experimental_strat-string-value"
+    }
+  },
+  "sbg:revision": 1,
+  "sbg:cmdPreview": "gtdownload  > stdout.txt",
+  "sbg:revisionsInfo": [
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459381594,
+      "sbg:revision": 0
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459607345,
+      "sbg:revision": 1
+    }
+  ],
+  "sbg:image_url": null,
+  "successCodes": [],
+  "sbg:modifiedOn": 1459607345,
+  "requirements": [
+    {
+      "requirements": [
+        {
+          "dockerPull": "rabix/js-engine",
+          "class": "DockerRequirement"
+        }
+      ],
+      "class": "ExpressionEngineRequirement",
+      "id": "#cwl-js-engine"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "#output",
+      "outputBinding": {
+        "glob": "*.txt"
+      },
+      "type": [
+        "null",
+        "File"
+      ]
+    },
+    {
+      "id": "#BAM",
+      "outputBinding": {
+        "sbg:metadata": {
+          "disease_type": {
+            "class": "Expression",
+            "script": "$job.inputs.Disease",
+            "engine": "#cwl-js-engine"
+          },
+          "experimental_strategy": {
+            "class": "Expression",
+            "script": "$job.inputs.experimental_strat",
+            "engine": "#cwl-js-engine"
+          }
+        },
+        "glob": {
+          "class": "Expression",
+          "script": "{\n  dir = $job.inputs.UUID\n  return \"./\".concat(dir, \"/*.bam\")\n}",
+          "engine": "#cwl-js-engine"
+        }
+      },
+      "description": "bam file",
+      "type": [
+        "null",
+        "File"
+      ],
+      "fileTypes": "BAM"
+    },
+    {
+      "id": "#BAI",
+      "outputBinding": {
+        "sbg:metadata": {
+          "disease_type": {
+            "class": "Expression",
+            "script": "$job.inputs.Disease",
+            "engine": "#cwl-js-engine"
+          },
+          "experimental_strategy": {
+            "class": "Expression",
+            "script": "$job.inputs.experimental_strat",
+            "engine": "#cwl-js-engine"
+          }
+        },
+        "glob": {
+          "class": "Expression",
+          "script": "{\n  dir = $job.inputs.UUID \n  return \"./\".concat(dir, \"/*.bai\")\n}\n",
+          "engine": "#cwl-js-engine"
+        }
+      },
+      "label": "BAI file",
+      "type": [
+        "null",
+        "File"
+      ],
+      "fileTypes": "BAI"
+    }
+  ],
+  "sbg:createdOn": 1459381594,
+  "sbg:createdBy": "gauravCGC",
+  "sbg:project": "gauravCGC/devtools",
+  "sbg:validationErrors": [],
+  "description": "",
+  "sbg:latestRevision": 1
+}
