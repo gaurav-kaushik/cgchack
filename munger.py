@@ -21,17 +21,20 @@ import sys
 
 def get_dataframe_list(args, data_fields=('gene', 'raw_counts')):
 
-    # GET A LIST OF DATAFRAMES
+    # get a list of dataframes
     dfs, files = [], args['files'] or []
+    # create an index using the filenames
+    # this will prevent having an overlong command line for 100's or 1000's of files
     if args['file_index']:
         with open(args['file_index']) as fp:
             files.extend(fp.readlines())
     files = sorted(filter(None, set([f.strip() for f in files])))
+    # now iterate over the files and get the looooong list of dataframes
     for f in files:
         # Get only specific columns with usecols
         df = pd.read_table(f, usecols=data_fields)
         dfs.append(df)
-    return dfs, files # a list of dataframes
+    return dfs, files # a list of dataframes and the files index
 
 def get_metadata_tag(filename):
     """ Gets a filename (without extension) from a provided path """
@@ -42,11 +45,7 @@ def get_metadata_tag(filename):
 def merge_texts(args):
     # get the list of dataframes
     dfs, filenames = get_dataframe_list(args)
-    # files_list = filenames
-    # get the filenames to later append the column name with the TCGA barcode
-    # filenames = args['files'] # need to get the INDEX
     # rename the columns of the first df
-    print dfs
     df = dfs[0].rename(columns={'raw_counts': 'raw_counts_' + get_metadata_tag(filenames[0])})
     # enumerate over the list, merge, and rename columns
     for i, frame in enumerate(dfs[1:], 2):
