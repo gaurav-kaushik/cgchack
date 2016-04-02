@@ -1,0 +1,230 @@
+{
+  "id": "https://cgc-api.sbgenomics.com/v2/apps/gauravCGC/gene-expression/gene-expression-munger/0/raw/",
+  "class": "CommandLineTool",
+  "label": "Gene Expression Munger",
+  "description": "",
+  "requirements": [
+    {
+      "fileDef": [
+        {
+          "fileContent": "\"\"\"\nusage: munger.py [-h] [-f FILES [FILES ...]] [-c] [-o OUTPUT_FILENAME]\n\noptional arguments:\n  -h, --help            show this help message and exit\n  -f FILES [FILES ...], --files FILES [FILES ...]\n                        TCGA Gene Expression TXT files\n  -c, --csv\n  -o OUTPUT_FILENAME, --output_filename OUTPUT_FILENAME\n\"\"\"\n\nimport pandas as pd\nimport argparse\nimport sys\n\n# To read TXT files:\n# df = pd.read_table(filename)\n# To read MAF files:\n# df = pd.read_table(filename, skiprows=1) # to skip the version row\n\ndef get_dataframe_list(args, data_fields=['gene','raw_counts']):\n\n    # GET A LIST OF DATAFRAMES\n    files_list = []\n    for f in sorted(args['files']):\n        # Get only specific columns with usecols\n        df = pd.read_table(f, usecols=data_fields)\n        files_list.append(df)\n    return files_list # a list of dataframes\n\ndef get_metadata_tag(filename):\n    \"\"\" Gets a filename (without extension) from a provided path \"\"\"\n    UNCID = filename.split('/')[-1].split('.')[0]\n    TCGA = filename.split('/')[-1].split('.')[1]\n    return TCGA\n\ndef merge_texts(args):\n    # get the list of dataframes\n    files_list = get_dataframe_list(args)\n    # get the filenames to later append the column name with the TCGA barcode\n    filenames = args['files']\n    # rename the columns of the first df\n    df = files_list[0].rename(columns={'raw_counts': 'raw_counts_' + get_metadata_tag(filenames[0])})\n    # enumerate over the list, merge, and rename columns\n    for i, frame in enumerate(files_list[1:], 2):\n        df = df.merge(frame, on='gene').rename(columns={'raw_counts':'raw_counts_' + get_metadata_tag(filenames[i-1])})\n    return df\n\ndef get_csv(args, df, filename='GEX_dataframe.csv', header_opt=False, index_opt=False):\n    # if csv is true and an output filename is given, rename\n    # there is a default filename, so it should pass if --csv is True\n    if args['csv'] and args['output_filename']:\n        df_csv = df.to_csv(path_or_buf=filename, header=header_opt, index=index_opt)\n    return df_csv\n\ndef get_transpose(df):\n    df_transpose = df.transpose()\n    df_transpose = df_transpose.rename(index = {'gene':'case'})\n    return df_transpose\n\ndef main(args):\n    df = merge_texts(args)\n    get_csv(args, df, filename=str(args['output_filename']) + '_by_gene.csv', header_opt=True)\n    if args['transpose']:\n        get_csv(args, get_transpose(df), filename=str(args['output_filename']) + '_by_case.csv', header_opt=False, index_opt=True)\n    return df\n\nif __name__ == \"__main__\":\n    parser = argparse.ArgumentParser()\n    parser.add_argument(\"-f\", \"--files\", help=\"TCGA Gene Expression TXT files\", nargs=\"+\")\n    parser.add_argument(\"-c\", \"--csv\", action=\"store_true\", default=False)\n    parser.add_argument(\"-t\", \"--transpose\", action=\"store_true\", default=False)\n    parser.add_argument(\"-o\", \"--output_filename\", type=str, default=\"GEX_dataframe\")\n\n    args = parser.parse_args()\n    args = vars(args)\n\n    try:\n        df = main(args)\n    except:\n        parser.print_help()\n        sys.exit(0)",
+          "filename": "munger.py"
+        }
+      ],
+      "class": "CreateFileRequirement"
+    },
+    {
+      "id": "#cwl-js-engine",
+      "requirements": [
+        {
+          "dockerPull": "rabix/js-engine",
+          "class": "DockerRequirement"
+        }
+      ],
+      "class": "ExpressionEngineRequirement"
+    }
+  ],
+  "inputs": [
+    {
+      "sbg:altPrefix": "--files",
+      "label": "Input Files",
+      "inputBinding": {
+        "prefix": "-f",
+        "separate": true,
+        "itemSeparator": " ",
+        "sbg:cmdInclude": true,
+        "position": 0
+      },
+      "id": "#input_files",
+      "sbg:fileTypes": "TXT",
+      "description": "Input Gene Expression Files",
+      "type": [
+        {
+          "items": "File",
+          "name": "input_files",
+          "type": "array"
+        }
+      ]
+    },
+    {
+      "sbg:altPrefix": "--output_filename",
+      "label": "Output_Filename",
+      "inputBinding": {
+        "separate": true,
+        "valueFrom": {
+          "class": "Expression",
+          "script": "$job.inputs.output_filename.replace(/.*\\/|\\.[^.]*$/g, '')",
+          "engine": "#cwl-js-engine"
+        },
+        "prefix": "-o",
+        "sbg:cmdInclude": true,
+        "position": 3
+      },
+      "id": "#output_filename",
+      "description": "User-defined name for the output CSV file",
+      "type": [
+        "string"
+      ],
+      "sbg:toolDefaultValue": "GEX_dataframe"
+    }
+  ],
+  "outputs": [
+    {
+      "label": "Output CSV",
+      "fileTypes": "CSV",
+      "id": "#output_csv_array",
+      "outputBinding": {
+        "sbg:inheritMetadataFrom": "#input_files",
+        "glob": "*.csv",
+        "loadContents": false,
+        "sbg:metadata": {
+          "number_of_input_files": {
+            "class": "Expression",
+            "script": "$job.inputs.input_files.length",
+            "engine": "#cwl-js-engine"
+          }
+        }
+      },
+      "description": "Output CSV File",
+      "type": [
+        {
+          "items": "File",
+          "name": "output_csv_array",
+          "type": "array"
+        }
+      ]
+    }
+  ],
+  "hints": [
+    {
+      "class": "sbg:CPURequirement",
+      "value": 1
+    },
+    {
+      "class": "sbg:MemRequirement",
+      "value": 1000
+    },
+    {
+      "dockerImageId": "",
+      "dockerPull": "rfranklin/pythondev",
+      "class": "DockerRequirement"
+    }
+  ],
+  "baseCommand": [
+    "python",
+    "munger.py"
+  ],
+  "stdin": "",
+  "stdout": "",
+  "successCodes": [],
+  "temporaryFailCodes": [],
+  "arguments": [
+    {
+      "prefix": "",
+      "valueFrom": "-c",
+      "separate": false,
+      "position": 1
+    },
+    {
+      "valueFrom": "-t",
+      "separate": false,
+      "position": 2
+    }
+  ],
+  "sbg:modifiedBy": "gauravCGC",
+  "sbg:sbgMaintained": false,
+  "sbg:id": "gauravCGC/gene-expression/gene-expression-munger/0",
+  "sbg:contributors": [
+    "gauravCGC"
+  ],
+  "sbg:job": {
+    "allocatedResources": {
+      "cpu": 1,
+      "mem": 1000
+    },
+    "inputs": {
+      "input_files": [
+        {
+          "secondaryFiles": [],
+          "path": "/path/to/input_files-1.txt",
+          "class": "File",
+          "size": 0
+        },
+        {
+          "secondaryFiles": [],
+          "path": "/path/to/input_files-2.txt",
+          "class": "File",
+          "size": 0
+        }
+      ],
+      "output_filename": "output_filename-string-value.csv"
+    }
+  },
+  "sbg:revision": 0,
+  "sbg:cmdPreview": "python munger.py -f /path/to/input_files-1.txt /path/to/input_files-2.txt -c -t -o output_filename-string-value",
+  "sbg:revisionsInfo": [
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459128653,
+      "sbg:revision": 1
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459127745,
+      "sbg:revision": 0
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459458788,
+      "sbg:revision": 2
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459459375,
+      "sbg:revision": 3
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459459450,
+      "sbg:revision": 4
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459533196,
+      "sbg:revision": 5
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459534622,
+      "sbg:revision": 6
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459536374,
+      "sbg:revision": 7
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459537339,
+      "sbg:revision": 8
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459539326,
+      "sbg:revision": 9
+    },
+    {
+      "sbg:modifiedBy": "gauravCGC",
+      "sbg:modifiedOn": 1459596361,
+      "sbg:revision": 10
+    }
+  ],
+  "sbg:image_url": null,
+  "sbg:modifiedOn": 1459127745,
+  "sbg:createdOn": 1459127745,
+  "sbg:createdBy": "gauravCGC",
+  "sbg:project": "gauravCGC/gene-expression",
+  "sbg:validationErrors": [],
+  "sbg:copyOf": "gauravCGC/devtools/gene-expression-munger/5",
+  "sbg:latestRevision": 10
+}
