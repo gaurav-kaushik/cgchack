@@ -1,6 +1,6 @@
 {
    "input_files": {
       "class" : "array",
-      "path": "*.txt"
+      "path": "Gene_Exp_Test/*"
      }
 }
